@@ -1,0 +1,145 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+/*
+Author: Hunter Davis
+CECS 424
+*/
+
+// Swapping of x and y
+void swap(int *x, int *y){
+	int temp = *x;
+	*x = *y;
+	*y = temp;
+}
+
+void quickSort(int *arr, int n){
+	int pivot; // Partitioning pivot elem
+	int i;
+	int j;
+
+	int ln, rn; // Len of L/R subarrays
+	int *larr, *rarr; // new pointers to sub arrays
+
+	if (n >= 2){
+		pivot = *(arr);
+		// initializing to 0 for first elem pivot, so i is index 1 now
+		i = 1; 
+
+		// check the rest of array after the pivot, keep track of i index
+		for (int j = 1; j <= n; j++){
+			// Printing:
+			// int k;
+			// for (k = 0; k < n; k++){
+			// 	printf("%d ", *(arr + k));
+			// }
+			// printf("\n");
+
+			// If our current index is less than the pivot
+			if (*(arr + j) < pivot){
+				// Swap arr + i & arr + j, increment i
+				swap((arr + i), (arr + j));
+				i++;
+			}
+		}
+		// this places the pivot into where it needs to go in the array
+		swap(arr, (arr + i - 1));
+
+		// Printing deug:
+		// int l;
+		// for (l = 0; l < n; l++){
+		// 	printf("%d ", *(arr + l));
+		// }
+		// printf("\n");
+
+		ln = i - 1;
+		larr = arr;
+		rarr = arr + i;
+		rn = n - i;
+
+		quickSort(larr, ln);
+		quickSort(rarr, rn);
+	}
+	else{
+		// end the quicksort if we finish
+		return;
+	}
+}
+
+void msort(int *a, int n){
+	// Continue msort if array has at least 1 element
+	if (n > 1){
+		// Midpoint would be half of the length of array
+		int midpoint = n / 2; // int division
+		// Allocating memory for 2 sub-arrays by initializing length
+		int left[midpoint], right[n - midpoint];
+		
+
+
+
+		// Copying data to the left & right subarrays:
+		// This copies into left-arr from the starting address to the midpoint
+		memcpy(left, &a[0], midpoint * sizeof(int));
+		// Copies into right sub-arr from midpoint to the end (mid + mid = end)
+		memcpy(right, &a[midpoint], midpoint * sizeof(int));
+		
+		//Debug print to check splitting of list into two
+		// printf("Left: ");
+		// int l;
+		// for (l = 0; l < midpoint; l++){
+		// 	printf("%d ", *(left + l));
+		// }
+		// printf("\n");
+		// printf("Right: ");
+		// for (l = 0; l < midpoint; l++){
+		// 	printf("%d ", *(right + l));
+		// }
+		// printf("\n");
+
+		// Recursively sorting the left half of the array
+		msort(left, sizeof(left)/sizeof(int));
+		// Recursively sorting the right half of the array
+		msort(right, sizeof(right)/sizeof(int));
+		// Initializing iteration variables here (0 for start of array)
+
+		
+	}
+}
+
+// Main function to call sorts with our array
+int main() {
+	printf("Quick sort and Merge sort!\n\n");
+	// Recursive quick Sort:
+	int arr[] = {4, 65, 2, -31, 0, 99, 2, 83, 782, 1};
+	printf("Unsorted:\n");
+	int i;
+	for (i = 0; i < 10; i++){
+		printf("%d ", *(arr+i));
+	}
+	printf("\n");
+	// Initializing the pointer to the start of the array
+	int *arrptr = &arr[0];
+	int n = 10; // len of the array: n elements
+	// Recursive quick sort:
+	quickSort(arrptr, n);
+	// Printing our quick sorted results
+	printf("Quick sorted array:\n");
+	for (i = 0; i <= n; i++){
+		printf("%d ", *(arr+i));
+	}
+	printf("\n");
+
+	int arr1[] = {4, 65, 2, -31, 0, 99, 2, 83, 782, 1, 0};
+	// Initializing the pointer to the start of the array
+	int *arrptr1 = &arr1[0];
+	int n1 = 10; // len of the array: n elements
+	// Recursive merge sort:
+	msort(arrptr1, n1);
+	// Printing our merge sorted results:
+	printf("Merge sorted array:\n");
+	for (i = 0; i <= n1; i++){
+		printf("%d ", *(arr+i));
+	}
+	printf("\n");
+  return 0; // end main
+}
