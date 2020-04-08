@@ -1,0 +1,270 @@
+/*
+Author: Hunter Davis
+CECS 424
+3/6/2020
+*/
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+
+// Determine the size of a Block value using sizeof(struct Block) and assign it to a global const variable. We refer to this value as "overhead size"
+
+typedef struct Block{
+	int block_size; // # of bytes in the data section
+	struct Block *next_block; // pointer to the next block
+}Block;
+// The data section follows in memory after the above struct
+
+
+const int overhead_size = sizeof(Block);
+const int void_size = sizeof(void*); // the size of a void pointer
+
+// Points to the first free block in the free list
+Block *free_head;
+
+
+void my_initialize_heap(int size){
+	// Uses malloc to init a buffer of the given size to use in our custom allocator (only time we can use malloc in the program)
+	free_head = malloc(size); // initialize a buffer of the given size
+	// Global var free_head should point to this buffer, initialized with the right values for block_size and next_block
+	free_head->block_size = size - overhead_size;
+	free_head->next_block = NULL; // No next block yet
+}
+
+void* my_malloc(int size){
+	// fills an allocation request of size bytes and returns a pointer to the data portion of the block used to satisfy the request 
+
+	// (a) walk the free list starting at free_head, looking for a block with a large enough size to fit the request. If no blocks can be found, returns 0 (null). Use the first fit heuristic
+
+	// (b) size can be any positive integer value, but any block you use must have a data size that is a multiple of your void* size. So if a void* is 4 bytes, and the function is told to allocate a 2 byte block, you would actually find a block with 4 bytes of data and use that, with 2 bytes being fragmentation
+	
+	// (c) Once you have found a block to fit the data size, decide whether you need to split that block
+	// Making the size a multiple of 8 larger than the size we are given (AKA rounding up to the nearest multiple of 8)
+	// Rounding the size up to nearest multiple of 8
+	int block_size = 0;
+	while (block_size < size) {
+		block_size += 8;
+	}
+	
+	Block *new_block = free_head; // starting point
+	int found = 0;
+	// Traversing
+	while (new_block != NULL) {
+		// end
+		if (new_block->block_size >= block_size) {
+			found = 1;
+			// we keep new_block's value
+			break;
+		}
+		else {
+			// Else keep going
+			new_block = new_block->next_block;
+		}
+		
+	}
+	if (found == 0){
+		// Set current_block pointer to NULL
+		new_block = NULL;
+	}
+
+
+	int splitSize = block_size + 2*overhead_size + void_size;
+	if (new_block->block_size > splitSize) {
+		// Split here
+		// Setting pointer to new empty block
+		Block *split_block = (void*) new_block + block_size + overhead_size;
+
+		split_block->block_size = new_block->block_size - block_size - overhead_size; // Setting the new block's size
+		split_block->next_block = new_block->next_block; // Linking the next block
+
+		new_block->block_size = block_size; // Linking the list back together
+		new_block->next_block = split_block; // adjusting the new block's size
+	}
+	// Assigning previous block to the current free_head
+	Block *prev_block = free_head;
+
+
+	if(new_block == free_head){
+		free_head = new_block->next_block;
+	}
+	else{
+		// iterating through to check which block is to be removed
+		while (prev_block->next_block != new_block){
+			prev_block = prev_block->next_block;
+		}
+		prev_block->next_block = new_block->next_block; // relinking list after removing new block
+	}
+
+	return (void*)(new_block) + overhead_size;
+	// (a) Positive int value and data size is multiple of your pointer size
+	
+}
+
+void my_free(void *data){
+	// Deallocates a value that was allocated on the data heap. The pointer will be to the data portion of a block; move backwards in memory to find the block's overhead information, and then link it into the free list
+	// struct Block *current_head = data - overhead_size;
+	// // Link it to the free list
+	// current_head->next_block = free_head;
+	// free_head = current_head;
+	Block *block = data - overhead_size;
+	
+	if (free_head == NULL){
+		free_head = block;
+		block->next_block = NULL;
+	}
+	else if (block < free_head){
+		block->next_block = free_head;
+		free_head = block;
+	}
+	else{
+		struct Block *curr = free_head; 
+		
+		while(curr->next_block < block){
+			curr = curr->next_block;
+		}
+		block->next_block = curr->next_block;
+		curr->next_block = block;
+	}
+}
+
+
+int main(void){
+	// Initializing a large enough heap
+	my_initialize_heap(1000 * sizeof(int));
+	printf("overhead_size = %d bytes\n", overhead_size);
+	printf("size of voidpointer: %d bytes\n", void_size);
+	printf("Initial free_head: %p\n", free_head);
+	int run = 1;
+	int choice;
+	while (run == 1) {
+		printf("Enter a case to run:");
+		scanf("%d", &choice);
+		switch(choice){
+			case 0:
+				run = 0;
+				printf("Ending program.");
+				break;
+			case 1:
+				//First Test
+				//Allocate an int, print addr, free it, and allocate another and print addr, it will be the same address
+				printf("Test 1\n");
+				int *int_1A = my_malloc(sizeof(int)); // Allocating int 1A
+				printf("First Address 1A: %p\n", int_1A); // Print addr of int 1A
+				my_free(int_1A); // freeing the first int
+				// Allocating new int
+				int *int_1B = my_malloc(sizeof(int)); // Allocating int 1B
+				printf("Second Address 1B: %p\n", int_1B); // Print addr of int 1B
+				printf("The two addr above should match\n");
+				my_free(int_1B); // Freeing second int
+				break;
+			case 2:
+				// Second Test
+				// Allocate two int values and print their addr
+				printf("Test 2\n");
+				int *int_2A = (int *)my_malloc(sizeof(int));
+				printf("Address 2A: %p\n", int_2A);
+				int *int_2B = (int *)my_malloc(sizeof(int));
+				printf("Address 2B: %p\n", int_2B);
+				printf("Addresses should be exactly the sizeof(overhead) + sizeof(void*) = %lu\n", overhead_size + sizeof(void*));
+				// These should be exactly the size of our overhead plus the size of a void pointer apart
+				my_free(int_2A);
+				my_free(int_2B);
+				break;
+			case 3:
+				// Third Test
+				printf("Test 3\n");
+				// Allocate 3 ints and print addr, then free second int
+				// Allocate double and print addr, it should be the same as the second int
+				int *int_3A = (int *)my_malloc(sizeof(int));
+				printf("Address 3A: %p\n", int_3A);
+				int *int_3B = (int *)my_malloc(sizeof(int));
+				printf("Address 3B: %p\n", int_3B);
+				int *int_3C = (int *)my_malloc(sizeof(int));
+				printf("Address 3C: %p\n", int_3C);
+				my_free(int_3B); // free second int
+				printf("Freeing 3B, then creating 3D\n");
+				double *int_3D = (double *)my_malloc(sizeof(double));
+				printf("Address 3D: %p\n", int_3D);
+				printf("3D's addr should match 3B's addr\n");
+				my_free(int_3A);
+				my_free(int_3C);
+				my_free(int_3D);
+				break;
+			case 4:
+				// Fourth Test
+				printf("Test 4\n");
+				// Allocate a char and an int and print addr
+				// Should be same distance as in Test 2
+				char *int_4A = (char *)my_malloc(sizeof(char));
+				
+				int *int_4B = (int *)my_malloc(sizeof(int));
+				printf("Address 4A: %p\n", int_4A);
+				printf("Address 4B: %p\n", int_4B);
+				printf("Addresses should be exactly the sizeof(overhead) + sizeof(void*) = %lu (same as #2)\n", overhead_size + sizeof(void*));
+				my_free(int_4A);
+				my_free(int_4B);
+				break;
+			case 5:
+				// Fifth Test
+				printf("Test 5\n");
+				// Allocate space for a 100-int arr, then one more int
+				// Verify addr of last int is 100*sizeof(int) + header size after the arr addr
+				int *int_5A = (int *)my_malloc(100 * sizeof(int));
+				printf("Address 5_A: %p\n", int_5A);
+				int *int_5B = (int *)my_malloc(sizeof(int));
+				printf("Address 5_B: %p\n", int_5B);
+				printf("Address 5_B should be: %p\n", int_5A + 100 + sizeof(int)); // The address is starting point of 5A + 100 + size of an int
+				printf("Value of 5_B: %d\n", *int_5B);
+				// Free the arr, check taht the int's addr and value don't change
+				printf("Freeing 5_A (100 ints)\n");
+				my_free(int_5A);
+				printf("Address 5_B: %p\n", int_5B);
+				printf("Value of 5_B: %d\n", *int_5B);
+				break;
+			case 6:
+				// Standard Deviation Test
+				printf("\nStandard Deviation\n");
+				int n;
+				printf("Enter a positive integer n: ");
+				scanf("%d", &n);
+				printf("You entered %d ints.\n", n);
+
+				// Allocate int arr with size n
+				int *arrStdDef = (int *)my_malloc(n);
+				// Read n integers from standard in, into the array we allocated (loop ask them) 
+				int num;
+				for (int i = 0; i < n; i++){
+					printf("Enter integer %d: ", i + 1);
+					scanf("%d", &num);
+					arrStdDef[i] = num;
+				}
+				// Calculate and print the standard deviated of the integers entered using the formula
+				printf("Calculating...\n");
+
+				int sum = 0;
+				for (int j = 0; j < n; j++)	{
+					sum += arrStdDef[j];
+				}
+
+				double mean = sum / n;
+
+				double sumStdDef = 0;
+				for (int k = 0; k < n; k++)	{
+					sumStdDef += pow((arrStdDef[k] - mean), 2);
+				}
+
+				double std = sqrt((sumStdDef / n));
+				printf("Standard Deviation: %f", std);
+
+				my_free(arrStdDef);
+				printf("\n");
+				system("pause");
+				break;
+		
+		}
+
+	}
+  
+  return 0;
+}
